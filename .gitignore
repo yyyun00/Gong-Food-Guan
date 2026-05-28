@@ -1,0 +1,7 @@
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/gongguan_food.db
+.DS_Store
+food-map-frontend/.next/
+food-map-frontend/node_modules/
