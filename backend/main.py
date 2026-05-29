@@ -6,14 +6,6 @@ from datetime import datetime
 from sqlmodel import Session, select
 from database import init_db, engine, Restaurant, Review
 from scraper import fetch_gongguan_restaurant_data
-from fastapi.middleware.cors import CORSMiddleware
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["https://gong-food-guan.vercel.app"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
 def main():
