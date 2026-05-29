@@ -170,10 +170,18 @@ class QuizEngine:
         self.current_q2 = self._shuffle(RAW_Q2_ENVIRONMENTS)
         self.current_q3 = self._shuffle(RAW_Q3_COLORS)
 
-    def _shuffle(self, pool: list) -> list:
-        copy = pool.copy()
-        random.shuffle(copy)
-        return copy
+    # def _shuffle(self, pool: list) -> list:
+    #     copy = pool.copy()
+    #     random.shuffle(copy)
+    #     return copy
+    def _sample_one_per_emotion(self, pool: list) -> list:
+        picked = []
+        for emotion in EMOTIONS:
+            candidates = [item for item in pool if item["emotion"] == emotion]
+            if candidates:
+                picked.append(random.choice(candidates))
+        random.shuffle(picked)
+        return picked
 
     def get_questions(self) -> list[dict]:
         return [
