@@ -163,12 +163,19 @@ RESTAURANT_POOL = {
     },
 }
 
+EMOTIONS = ["開心", "難過", "生氣", "煩躁"]  
 
 class QuizEngine:
     def __init__(self):
-        self.current_q1 = self._shuffle(RAW_Q1_QUOTES)
-        self.current_q2 = self._shuffle(RAW_Q2_ENVIRONMENTS)
-        self.current_q3 = self._shuffle(RAW_Q3_COLORS)
+        self.current_q1 = self._sample_one_per_emotion(RAW_Q1_QUOTES)
+        self.current_q2 = self._sample_one_per_emotion(RAW_Q2_ENVIRONMENTS)
+        self.current_q3 = self._sample_one_per_emotion(RAW_Q3_COLORS)
+
+# class QuizEngine:
+#     def __init__(self):
+#         self.current_q1 = self._shuffle(RAW_Q1_QUOTES)
+#         self.current_q2 = self._shuffle(RAW_Q2_ENVIRONMENTS)
+#         self.current_q3 = self._shuffle(RAW_Q3_COLORS)
 
     # def _shuffle(self, pool: list) -> list:
     #     copy = pool.copy()
