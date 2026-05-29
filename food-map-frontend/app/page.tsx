@@ -453,26 +453,27 @@ export default function Home() {
           </div>
 
           {restaurantName ? (
-            <div className="bg-white rounded-2xl shadow-sm px-5 py-4 mb-6">
+            <div className="bg-white rounded-2xl shadow-sm p-6 mb-4 text-center">
+              <div className="text-5xl mb-3">🍽️</div>
               <div className="text-xs text-gray-400 mb-1">
                 今天就去這裡吧 👇
               </div>
-              <div className="font-semibold text-gray-900 text-lg">
+              <div className="font-bold text-gray-900 text-2xl mb-1">
                 {restaurantName}
               </div>
               {restaurantDetail && (
-                <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+                <div className="text-sm text-gray-400 mt-2 flex items-center justify-center gap-2 flex-wrap">
                   <span>{restaurantDetail.category}</span>
                   <span>·</span>
                   <span>{restaurantDetail.address}</span>
-                  <span className="ml-auto bg-gray-100 px-2 py-0.5 rounded-full">
+                  <span className="bg-gray-100 px-2 py-0.5 rounded-full text-xs">
                     {PRICE_LABEL[restaurantDetail.price_tier]}
                   </span>
                 </div>
               )}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl shadow-sm p-5 text-center text-gray-400 text-sm mb-6">
+            <div className="bg-white rounded-2xl shadow-sm p-6 text-center text-gray-400 text-sm mb-4">
               目前此情緒／預算的餐廳池為空，請在 quiz.py 的 RESTAURANT_POOL
               補充資料。
             </div>
