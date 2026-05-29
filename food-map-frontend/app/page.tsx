@@ -31,6 +31,11 @@ const STAGE_LABEL: Record<string, string> = {
   environment: "環境",
   color: "顏色",
 };
+const STAGE_SUBTITLE: Record<string, string> = {
+  quote: "請選擇一句最符合你現在心境的句子",
+  environment: "請選擇最吸引你的用餐環境",
+  color: "請選擇現在最讓你共鳴的顏色",
+};
 const EMOTION_EMOJI: Record<string, string> = {
   開心: "☀️",
   生氣: "🔥",
@@ -41,8 +46,14 @@ const EMOTION_EMOJI: Record<string, string> = {
 };
 const PRICE_LABEL: Record<number, string> = { 1: "平價", 2: "中等", 3: "精緻" };
 
-// Mobile steps: 0=Q1, 1=Q2, 2=Q3, 3=budget
-const MOBILE_STEPS = ["名言", "環境", "顏色", "預算"];
+// Steps: 0=Q1, 1=Q2, 2=Q3, 3=budget
+const STEPS = ["名言", "環境", "顏色", "預算"];
+
+const BUDGET_OPTIONS = [
+  { key: "低", label: "平價", sub: "150 元以內" },
+  { key: "中", label: "一般", sub: "150–350 元" },
+  { key: "高", label: "精緻", sub: "350 元以上" },
+] as const;
 
 export default function Home() {
   const [phase, setPhase] = useState<Phase>("loading");
@@ -62,7 +73,7 @@ export default function Home() {
     null,
   );
   const [submitting, setSubmitting] = useState(false);
-  const [mobileStep, setMobileStep] = useState(0); // 0-3
+  const [currentStep, setCurrentStep] = useState(0); // 0-3, shared for both mobile and desktop
 
   useEffect(() => {
     fetchQuestions();
@@ -81,7 +92,7 @@ export default function Home() {
       setBudget(null);
       setRestaurantName(null);
       setRestaurantDetail(null);
-      setMobileStep(0);
+      setCurrentStep(0);
       setPhase("quiz");
     } catch {
       setPhase("error");
@@ -99,8 +110,8 @@ export default function Home() {
     }, 200);
   }
 
-  function canAdvanceMobileStep() {
-    if (mobileStep < 3) return selections[mobileStep] !== null;
+  function canAdvanceStep() {
+    if (currentStep < 3) return selections[currentStep] !== null;
     return budget !== null;
   }
 
@@ -164,19 +175,191 @@ export default function Home() {
   }
 
   const allSelected = selections.every((s) => s !== null);
+  const isBudgetStep = currentStep === 3;
+  const currentQuestion = !isBudgetStep ? questions[currentStep] : null;
+  const isLastStep = currentStep === STEPS.length - 1;
 
-  // Decide what's shown on the current mobile step
-  const isBudgetStep = mobileStep === 3;
-  const currentQuestion = !isBudgetStep && questions[mobileStep];
-  const isLastMobileStep = mobileStep === MOBILE_STEPS.length - 1;
+  // Shared step indicator (used in both desktop & mobile)
+  function StepIndicator({ compact = false }: { compact?: boolean }) {
+    return (
+      <div
+        className={`flex items-center gap-1 ${compact ? "mb-4" : "mb-8"} w-full justify-center`}
+      >
+        {STEPS.map((label, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <button
+              onClick={() => {
+                if (i < currentStep || (i > 0 && selections[i - 1] !== null)) {
+                  setCurrentStep(i);
+                }
+              }}
+              className="flex flex-col items-center gap-0.5"
+            >
+              <div
+                className={[
+                  "rounded-full flex items-center justify-center font-bold transition-all duration-200",
+                  compact ? "w-7 h-7 text-xs" : "w-8 h-8 text-sm",
+                  i === currentStep
+                    ? "bg-gray-900 text-white scale-110"
+                    : i < currentStep
+                      ? "bg-gray-400 text-white"
+                      : "bg-gray-200 text-gray-400",
+                ].join(" ")}
+              >
+                {i < currentStep ? "✓" : i + 1}
+              </div>
+              <span
+                className={[
+                  "text-[10px]",
+                  i === currentStep
+                    ? "text-gray-900 font-semibold"
+                    : "text-gray-400",
+                ].join(" ")}
+              >
+                {label}
+              </span>
+            </button>
+            {i < STEPS.length - 1 && (
+              <div
+                className={[
+                  "h-px mb-3 transition-all duration-300",
+                  compact ? "w-6" : "w-10",
+                  i < currentStep ? "bg-gray-400" : "bg-gray-200",
+                ].join(" ")}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Shared card content
+  function StepCard({ stepIndex }: { stepIndex: number }) {
+    const isBudget = stepIndex === 3;
+    const question = !isBudget ? questions[stepIndex] : null;
+
+    if (isBudget) {
+      return (
+        <>
+          <h2 className="text-lg font-semibold text-gray-800 mb-1">💰 預算</h2>
+          <p className="text-xs text-gray-400 mb-4">今天想花多少？</p>
+          <div className="flex flex-col gap-3">
+            {BUDGET_OPTIONS.map(({ key, label, sub }) => (
+              <button
+                key={key}
+                onClick={() => setBudget(key)}
+                className={[
+                  "w-full text-left px-4 py-3 rounded-xl text-sm transition-all duration-150 border flex items-center justify-between",
+                  budget === key
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "bg-gray-100 border-gray-100 text-gray-700 hover:bg-gray-200",
+                ].join(" ")}
+              >
+                <span className="font-medium">{label}</span>
+                <span
+                  className={
+                    budget === key
+                      ? "text-gray-300 text-xs"
+                      : "text-gray-400 text-xs"
+                  }
+                >
+                  {sub}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      );
+    }
+
+    if (!question) return null;
+
+    return (
+      <>
+        <h2 className="text-lg font-semibold text-gray-800 mb-1">
+          {STAGE_EMOJI[question.stage]} {STAGE_LABEL[question.stage]}
+        </h2>
+        <p className="text-xs text-gray-400 mb-4">
+          {STAGE_SUBTITLE[question.stage]}
+        </p>
+        <div className="flex flex-col gap-2">
+          {question.options.map((optText, oi) => {
+            const key = `${stepIndex}-${oi}`;
+            const isSelected = selections[stepIndex] === oi;
+            const isFlashing = flash === key;
+            return (
+              <button
+                key={oi}
+                onClick={() => handleSelect(stepIndex, oi)}
+                className={[
+                  "w-full text-left px-4 py-3 rounded-xl text-sm transition-all duration-150 border",
+                  isSelected
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : isFlashing
+                      ? "bg-gray-200 border-gray-300 text-gray-800"
+                      : "bg-gray-100 border-gray-100 text-gray-700 hover:bg-gray-200",
+                ].join(" ")}
+              >
+                {optText}
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
+  // Shared navigation buttons
+  function NavButtons({ wide = false }: { wide?: boolean }) {
+    return (
+      <div className={`flex gap-3 mt-4 ${wide ? "w-full max-w-lg" : "w-full"}`}>
+        {currentStep > 0 && (
+          <button
+            onClick={() => setCurrentStep((s) => s - 1)}
+            className="flex-1 py-3 rounded-full border border-gray-300 text-sm text-gray-500 hover:bg-gray-100 transition-all"
+          >
+            ← 上一步
+          </button>
+        )}
+        {!isLastStep ? (
+          <button
+            onClick={() => canAdvanceStep() && setCurrentStep((s) => s + 1)}
+            disabled={!canAdvanceStep()}
+            className={[
+              "flex-1 py-3 rounded-full text-sm font-semibold transition-all duration-200",
+              canAdvanceStep()
+                ? "bg-gray-900 text-white hover:bg-gray-700"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed",
+            ].join(" ")}
+          >
+            下一步 →
+          </button>
+        ) : (
+          <button
+            onClick={handleStartRecommend}
+            disabled={!allSelected || !budget || submitting}
+            className={[
+              "flex-1 py-3 rounded-full text-sm font-semibold transition-all duration-200",
+              allSelected && budget && !submitting
+                ? "bg-gray-900 text-white hover:bg-gray-700 shadow-lg"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed",
+            ].join(" ")}
+          >
+            {submitting ? "分析中…" : "開始推薦 🎯"}
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col items-center py-10 px-4">
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-900">
-        🍜 Gong Food Guan
+        🍜 GongFoodGuan
       </h1>
       <p className="text-xl mb-10 tracking-tight text-gray-500">
-        A satisfying food explore.
+        A personality quiz to help you decide what to eat today!
       </p>
 
       {/* ── LOADING ── */}
@@ -203,270 +386,25 @@ export default function Home() {
       {phase === "quiz" && questions.length === 3 && (
         <>
           {/* ════════════════════════════════
-              DESKTOP: 三欄 + 預算 + 按鈕
+              DESKTOP: 步驟式，較寬卡片
           ════════════════════════════════ */}
           <div className="hidden md:flex md:flex-col md:items-center w-full">
-            <div className="w-full max-w-5xl grid grid-cols-3 gap-4 mb-6">
-              {questions.map((q, qi) => (
-                <div
-                  key={qi}
-                  className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3"
-                >
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    {STAGE_EMOJI[q.stage]} {STAGE_LABEL[q.stage]}
-                  </h2>
-                  <div className="flex flex-col gap-2">
-                    {q.options.map((optText, oi) => {
-                      const key = `${qi}-${oi}`;
-                      const isSelected = selections[qi] === oi;
-                      const isFlashing = flash === key;
-                      return (
-                        <button
-                          key={oi}
-                          onClick={() => handleSelect(qi, oi)}
-                          className={[
-                            "w-full text-left px-4 py-3 rounded-xl text-sm transition-all duration-150 border",
-                            isSelected
-                              ? "bg-gray-900 text-white border-gray-900"
-                              : isFlashing
-                                ? "bg-gray-200 border-gray-300 text-gray-800"
-                                : "bg-gray-100 border-gray-100 text-gray-700 hover:bg-gray-200",
-                          ].join(" ")}
-                        >
-                          {optText}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+            <StepIndicator compact={false} />
+            <div className="w-full max-w-lg bg-white rounded-2xl shadow-sm p-7 flex flex-col gap-2 min-h-[340px]">
+              <StepCard stepIndex={currentStep} />
             </div>
-
-            {/* 預算 */}
-            <div className="w-full max-w-5xl bg-white rounded-2xl shadow-sm p-5 mb-8">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">
-                💰 預算
-              </h2>
-              <div className="flex flex-col gap-3">
-                {(
-                  [
-                    { key: "低", label: "平價", sub: "200 元以內" },
-                    { key: "中", label: "一般", sub: "200–400 元" },
-                    { key: "高", label: "精緻", sub: "400 元以上" },
-                  ] as const
-                ).map(({ key, label, sub }) => (
-                  <button
-                    key={key}
-                    onClick={() => setBudget(key)}
-                    className={[
-                      "w-full text-left px-4 py-3 rounded-xl text-sm transition-all duration-150 border flex items-center justify-between",
-                      budget === key
-                        ? "bg-gray-900 text-white border-gray-900"
-                        : "bg-gray-100 border-gray-100 text-gray-700 hover:bg-gray-200",
-                    ].join(" ")}
-                  >
-                    <span className="font-medium">{label}</span>
-                    <span
-                      className={
-                        budget === key
-                          ? "text-gray-300 text-xs"
-                          : "text-gray-400 text-xs"
-                      }
-                    >
-                      {sub}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleStartRecommend}
-              disabled={!allSelected || !budget || submitting}
-              className={[
-                "px-10 py-4 rounded-full text-base font-semibold transition-all duration-200",
-                allSelected && budget && !submitting
-                  ? "bg-gray-900 text-white hover:bg-gray-700 shadow-lg"
-                  : "bg-gray-300 text-gray-400 cursor-not-allowed",
-              ].join(" ")}
-            >
-              {submitting ? "分析中…" : "開始推薦 🎯"}
-            </button>
+            <NavButtons wide={true} />
           </div>
 
           {/* ════════════════════════════════
-              MOBILE: 分步驟卡片
+              MOBILE: 步驟式，較窄卡片
           ════════════════════════════════ */}
           <div className="flex md:hidden flex-col items-center w-full max-w-sm">
-            {/* 步驟指示器 */}
-            <div className="flex items-center gap-1 mb-6 w-full justify-center">
-              {MOBILE_STEPS.map((label, i) => (
-                <div key={i} className="flex items-center gap-1">
-                  <button
-                    onClick={() => {
-                      // allow going back to already-answered steps
-                      if (
-                        i < mobileStep ||
-                        (i > 0 && selections[i - 1] !== null)
-                      ) {
-                        setMobileStep(i);
-                      }
-                    }}
-                    className="flex flex-col items-center gap-0.5"
-                  >
-                    <div
-                      className={[
-                        "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200",
-                        i === mobileStep
-                          ? "bg-gray-900 text-white scale-110"
-                          : i < mobileStep
-                            ? "bg-gray-400 text-white"
-                            : "bg-gray-200 text-gray-400",
-                      ].join(" ")}
-                    >
-                      {i < mobileStep ? "✓" : i + 1}
-                    </div>
-                    <span
-                      className={[
-                        "text-[10px]",
-                        i === mobileStep
-                          ? "text-gray-900 font-semibold"
-                          : "text-gray-400",
-                      ].join(" ")}
-                    >
-                      {label}
-                    </span>
-                  </button>
-                  {i < MOBILE_STEPS.length - 1 && (
-                    <div
-                      className={[
-                        "w-6 h-px mb-3 transition-all duration-300",
-                        i < mobileStep ? "bg-gray-400" : "bg-gray-200",
-                      ].join(" ")}
-                    />
-                  )}
-                </div>
-              ))}
+            <StepIndicator compact={true} />
+            <div className="w-full bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-2 min-h-[320px]">
+              <StepCard stepIndex={currentStep} />
             </div>
-
-            {/* 卡片內容 */}
-            <div className="w-full bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3 min-h-[320px]">
-              {!isBudgetStep && currentQuestion && (
-                <>
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    {STAGE_EMOJI[currentQuestion.stage]}{" "}
-                    {STAGE_LABEL[currentQuestion.stage]}
-                  </h2>
-                  <p className="text-xs text-gray-400">
-                    {currentQuestion.text}
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {currentQuestion.options.map((optText, oi) => {
-                      const key = `${mobileStep}-${oi}`;
-                      const isSelected = selections[mobileStep] === oi;
-                      const isFlashing = flash === key;
-                      return (
-                        <button
-                          key={oi}
-                          onClick={() => handleSelect(mobileStep, oi)}
-                          className={[
-                            "w-full text-left px-4 py-3 rounded-xl text-sm transition-all duration-150 border",
-                            isSelected
-                              ? "bg-gray-900 text-white border-gray-900"
-                              : isFlashing
-                                ? "bg-gray-200 border-gray-300 text-gray-800"
-                                : "bg-gray-100 border-gray-100 text-gray-700 hover:bg-gray-200",
-                          ].join(" ")}
-                        >
-                          {optText}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {isBudgetStep && (
-                <>
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    💰 預算
-                  </h2>
-                  <p className="text-xs text-gray-400 mb-2">今天想花多少？</p>
-                  <div className="flex flex-col gap-3">
-                    {(
-                      [
-                        { key: "低", label: "平價", sub: "200 元以內" },
-                        { key: "中", label: "一般", sub: "200–400 元" },
-                        { key: "高", label: "精緻", sub: "400 元以上" },
-                      ] as const
-                    ).map(({ key, label, sub }) => (
-                      <button
-                        key={key}
-                        onClick={() => setBudget(key)}
-                        className={[
-                          "w-full text-left px-4 py-3 rounded-xl text-sm transition-all duration-150 border flex items-center justify-between",
-                          budget === key
-                            ? "bg-gray-900 text-white border-gray-900"
-                            : "bg-gray-100 border-gray-100 text-gray-700 hover:bg-gray-200",
-                        ].join(" ")}
-                      >
-                        <span className="font-medium">{label}</span>
-                        <span
-                          className={
-                            budget === key
-                              ? "text-gray-300 text-xs"
-                              : "text-gray-400 text-xs"
-                          }
-                        >
-                          {sub}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* 下一步 / 送出按鈕 */}
-            <div className="flex w-full gap-3 mt-4">
-              {mobileStep > 0 && (
-                <button
-                  onClick={() => setMobileStep((s) => s - 1)}
-                  className="flex-1 py-3 rounded-full border border-gray-300 text-sm text-gray-500 hover:bg-gray-100 transition-all"
-                >
-                  ← 上一步
-                </button>
-              )}
-              {!isLastMobileStep ? (
-                <button
-                  onClick={() =>
-                    canAdvanceMobileStep() && setMobileStep((s) => s + 1)
-                  }
-                  disabled={!canAdvanceMobileStep()}
-                  className={[
-                    "flex-1 py-3 rounded-full text-sm font-semibold transition-all duration-200",
-                    canAdvanceMobileStep()
-                      ? "bg-gray-900 text-white hover:bg-gray-700"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed",
-                  ].join(" ")}
-                >
-                  下一步 →
-                </button>
-              ) : (
-                <button
-                  onClick={handleStartRecommend}
-                  disabled={!allSelected || !budget || submitting}
-                  className={[
-                    "flex-1 py-3 rounded-full text-sm font-semibold transition-all duration-200",
-                    allSelected && budget && !submitting
-                      ? "bg-gray-900 text-white hover:bg-gray-700 shadow-lg"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed",
-                  ].join(" ")}
-                >
-                  {submitting ? "分析中…" : "開始推薦 🎯"}
-                </button>
-              )}
-            </div>
+            <NavButtons wide={false} />
           </div>
         </>
       )}
