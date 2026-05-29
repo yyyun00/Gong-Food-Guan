@@ -175,11 +175,8 @@ export default function Home() {
       <h1 className="text-4xl font-bold mb-2 tracking-tight text-gray-900">
         🍜 Gong Food Guan
       </h1>
-      <p
-        className="text-xl mb-10 tracking-tight text-gray-500 italic"
-        style={{ fontFamily: "var(--font-lora), Georgia, serif" }}
-      >
-        A exploring food journey. A satisfying food map.
+      <p className="text-xl mb-10 tracking-tight text-gray-500">
+        A satisfying food explore.
       </p>
 
       {/* ── LOADING ── */}
@@ -250,19 +247,34 @@ export default function Home() {
               <h2 className="text-lg font-semibold text-gray-800 mb-4">
                 💰 預算
               </h2>
-              <div className="flex gap-3">
-                {(["低", "中", "高"] as const).map((b) => (
+              <div className="flex flex-col gap-3">
+                {(
+                  [
+                    { key: "低", label: "平價", sub: "200 元以內" },
+                    { key: "中", label: "一般", sub: "200–400 元" },
+                    { key: "高", label: "精緻", sub: "400 元以上" },
+                  ] as const
+                ).map(({ key, label, sub }) => (
                   <button
-                    key={b}
-                    onClick={() => setBudget(b)}
+                    key={key}
+                    onClick={() => setBudget(key)}
                     className={[
-                      "px-6 py-2 rounded-full text-sm font-medium border transition-all duration-150",
-                      budget === b
+                      "w-full text-left px-4 py-3 rounded-xl text-sm transition-all duration-150 border flex items-center justify-between",
+                      budget === key
                         ? "bg-gray-900 text-white border-gray-900"
-                        : "bg-gray-100 text-gray-600 border-gray-100 hover:bg-gray-200",
+                        : "bg-gray-100 border-gray-100 text-gray-700 hover:bg-gray-200",
                     ].join(" ")}
                   >
-                    {b}
+                    <span className="font-medium">{label}</span>
+                    <span
+                      className={
+                        budget === key
+                          ? "text-gray-300 text-xs"
+                          : "text-gray-400 text-xs"
+                      }
+                    >
+                      {sub}
+                    </span>
                   </button>
                 ))}
               </div>
